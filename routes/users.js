@@ -1,42 +1,17 @@
 const router = require('express').Router();
-const { celebrate, Joi } = require('celebrate');
+const {
+  validateUser,
+  validateLogin,
+  validateSignup,
+} = require('../utils/validator');
 const { createUser, getUserByToken, login } = require('../controllers/users');
 
 router.get('/users/me', getUserByToken);
 
-router.post(
-  '/users',
-  celebrate({
-    body: Joi.object().keys({
-      email: Joi.string().required().email(),
-      password: Joi.string().required().min(8),
-      name: Joi.string().required().min(2).max(30),
-    }),
-  }),
-  createUser,
-);
+router.post('/users', validateUser, createUser);
 
-router.post(
-  '/signin',
-  celebrate({
-    body: Joi.object().keys({
-      email: Joi.string().required().email(),
-      password: Joi.string().required().min(8),
-    }),
-  }),
-  login,
-);
+router.post('/signin', validateLogin, login);
 
-router.post(
-  '/signup',
-  celebrate({
-    body: Joi.object().keys({
-      email: Joi.string().required().email(),
-      password: Joi.string().required().min(8),
-      name: Joi.string().required().min(2).max(30),
-    }),
-  }),
-  createUser,
-);
+router.post('/signup', validateSignup, createUser);
 
 module.exports = router;

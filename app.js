@@ -4,18 +4,21 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 
 const { PORT = 3000 } = process.env;
+const {
+  DB_HOST = '127.0.0.1',
+  DB_PORT = '27017',
+  DB_DATABASE = 'newsexplorerdb',
+} = process.env;
 const app = express();
-const { celebrate, Joi, errors } = require('celebrate');
-const auth = require('./middleware/auth');
-const { createUser, login } = require('./controllers/users');
+const { errors } = require('celebrate');
 const { requestLogger, errorLogger } = require('./middleware/logger');
-
 const NotFoundError = require('./errors/NotFoundError');
+const errorHandler = require('./middleware/errorHandler');
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-mongoose.connect('mongodb://127.0.0.1:27017/newsexplorerdb');
+mongoose.connect(`mongodb://${DB_HOST}:${DB_PORT}/${DB_DATABASE}`);
 
 app.use(requestLogger);
 
@@ -28,33 +31,7 @@ app.get('/crash-test', () => {
   }, 0);
 });
 
-app.post(
-  '/signin',
-  celebrate({
-    body: Joi.object().keys({
-      email: Joi.string().required().email(),
-      password: Joi.string().required().min(8),
-    }),
-  }),
-  login,
-);
-
-app.post(
-  '/signup',
-  celebrate({
-    body: Joi.object().keys({
-      email: Joi.string().required().email(),
-      password: Joi.string().required().min(8),
-      name: Joi.string().required().min(2),
-    }),
-  }),
-  createUser,
-);
-
-// authorization
-app.use(auth);
-app.use('/', require('./routes/users'));
-app.use('/', require('./routes/articles'));
+app.use('/', require('./routes'));
 
 app.use((req, res) => {
   throw new NotFoundError('Requested resource not found');
@@ -64,14 +41,7 @@ app.use(errorLogger);
 
 app.use(errors());
 
-app.use((err, req, res, next) => {
-  // if an error has no status, display 500
-  const { statusCode = 500, message } = err;
-  res.status(statusCode).send({
-    // check the status and display a message based on it
-    message: statusCode === 500 ? 'An error occurred on the server' : message,
-  });
-});
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`App listening at port ${PORT}`);
