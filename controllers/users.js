@@ -5,6 +5,13 @@ const NotFoundError = require('../errors/NotFoundError');
 const BadRequestError = require('../errors/BadRequestError');
 const ConflictError = require('../errors/ConflictError');
 const NotAuthorizedError = require('../errors/NotAuthorizedError');
+const {
+  NOT_FOUND_ID_MSG,
+  BAD_REQUEST_MSG,
+  CONFLICT_MSG,
+  NOT_AUTHORIZED_MSG,
+} = require('../utils/utils');
+
 require('dotenv').config();
 
 const { NODE_ENV, JWT_SECRET } = process.env;
@@ -12,7 +19,7 @@ const { NODE_ENV, JWT_SECRET } = process.env;
 module.exports.getUser = (req, res, next) => {
   Users.findById(req.params.userId)
     .orFail(() => {
-      throw new NotFoundError('No user with matching ID found');
+      throw new NotFoundError(NOT_FOUND_ID_MSG);
     })
     .then((user) => res.send({ data: user }))
     .catch(next);
@@ -24,7 +31,7 @@ module.exports.createUser = (req, res, next) => {
   Users.findOne({ email: req.body.email })
     .then((user) => {
       if (user) {
-        throw new ConflictError('User already exist!');
+        throw new ConflictError(CONFLICT_MSG);
       }
       bcrypt
         .hash(password, 10)
@@ -34,8 +41,10 @@ module.exports.createUser = (req, res, next) => {
           name,
         }))
         .then((usr) => {
-          if (!usr) throw new BadRequestError('Validation Error');
-          return res.send({ data: usr });
+          if (!usr) throw new BadRequestError(BAD_REQUEST_MSG);
+          return res.send({
+            data: { _id: usr._id, email: usr.email, name: usr.name },
+          });
         });
     })
     .catch((err) => {
@@ -56,15 +65,15 @@ module.exports.login = (req, res, next) => {
       ),
     }))
     .catch((err) => {
-      next(new NotAuthorizedError(err.message));
+      next(new NotAuthorizedError(NOT_AUTHORIZED_MSG));
     });
 };
 
 module.exports.getUserByToken = (req, res, next) => {
   Users.findById(req.user._id)
     .orFail(() => {
-      throw new NotFoundError('No user with matching ID found');
+      throw new NotFoundError(NOT_FOUND_ID_MSG);
     })
-    .then((user) => res.send({ data: user }))
+    .then((user) => res.send({ data: { _id: user._id, email: user.email, name: user.name } }))
     .catch((err) => next(err));
 };

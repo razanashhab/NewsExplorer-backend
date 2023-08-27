@@ -2,17 +2,27 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const helmet = require('helmet');
+const { errors } = require('celebrate');
 
 const { PORT = 3000 } = process.env;
 const {
-  DB_HOST = '127.0.0.1',
-  DB_PORT = '27017',
-  DB_DATABASE = 'newsexplorerdb',
+  DB_HOST_DEV,
+  DB_PORT_DEV,
+  DB_DATABASE_DEV,
+} = require('./configuration/configuration');
+
+const {
+  DB_HOST = DB_HOST_DEV,
+  DB_PORT = DB_PORT_DEV,
+  DB_DATABASE = DB_DATABASE_DEV,
 } = process.env;
 const app = express();
-const { errors } = require('celebrate');
+
 const { requestLogger, errorLogger } = require('./middleware/logger');
+const { rateLimiterUsingThirdParty } = require('./middleware/rateLimiter');
 const NotFoundError = require('./errors/NotFoundError');
+const { NOT_FOUND_RESOURCE_MSG } = require('./utils/utils');
 const errorHandler = require('./middleware/errorHandler');
 
 app.use(bodyParser.json());
@@ -21,6 +31,8 @@ app.use(bodyParser.urlencoded({ extended: true }));
 mongoose.connect(`mongodb://${DB_HOST}:${DB_PORT}/${DB_DATABASE}`);
 
 app.use(requestLogger);
+app.use(rateLimiterUsingThirdParty);
+app.use(helmet());
 
 app.use(cors());
 app.options('*', cors()); // enable requests for all routes
@@ -34,7 +46,7 @@ app.get('/crash-test', () => {
 app.use('/', require('./routes'));
 
 app.use((req, res) => {
-  throw new NotFoundError('Requested resource not found');
+  throw new NotFoundError(NOT_FOUND_RESOURCE_MSG);
 });
 
 app.use(errorLogger);

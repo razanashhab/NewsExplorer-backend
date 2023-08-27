@@ -20,6 +20,8 @@ const userSchema = new mongoose.Schema({
     required: true,
     minlength: 8,
     select: false,
+    toObject: { useProjection: true },
+    toJSON: { useProjection: true },
   },
   name: {
     type: String,
